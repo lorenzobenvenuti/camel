@@ -92,6 +92,8 @@ public class RawPayloadTest extends AbstractSalesforceTestBase {
         }
     }
 
+    static boolean return401;
+
     @BeforeAll
     public static void startServer() throws IOException {
 
@@ -107,6 +109,10 @@ public class RawPayloadTest extends AbstractSalesforceTestBase {
                                     "{ \"access_token\": \"mock_token\", \"id\": \"https://login.salesforce.com/id/00D4100000xxxxxxxx/0054100000xxxxxxxx\", \"instance_url\": \""
                                      + loginUrl + "\"}");
                 } else {
+                    if (return401) {
+                        return401 = false;
+                        return new MockResponse().setResponseCode(401);
+                    }
                     return new MockResponse().setResponseCode(200)
                             .setHeader(HttpHeader.CONTENT_TYPE.toString(),
                                     recordedRequest.getHeader(HttpHeader.CONTENT_TYPE.toString()))
@@ -122,6 +128,8 @@ public class RawPayloadTest extends AbstractSalesforceTestBase {
 
     @BeforeEach
     public void setupRequestResponse() {
+        return401 = true;
+
         if (!format.equals(lastFormat)) {
             // expected response and test request
             final boolean isXml = "XML".equals(format);
