@@ -349,24 +349,20 @@ public class PubSubApiClient extends ServiceSupport {
                             LOG.debug("logged in {}", consumer.getTopic());
                         }
                         case PUBSUB_ERROR_CORRUPTED_REPLAY_ID -> {
-                            if (!fallbackToLatestReplayId) {
-                                // TODO: replay id is not set the first time
-                                LOG.error("replay id: " + replayId
-                                          + " is corrupted and fallbackToLatestReplayId is set to false - aborting");
-                                replayId = null;
-                                // TODO: should we only shut down the consumer!?
-                                try {
-                                    consumer.getRoute().getCamelContext().getRouteController()
-                                            .stopRoute(consumer.getRouteId());// shutdown?
-                                } catch (Exception ex) {
-                                    throw new RuntimeException(ex);
-                                }
-                                return;
+                            String currReplayId = null;
+                            if (replayId != null) {
+                                currReplayId = replayId;
+                            } else if (initialReplayPreset == ReplayPreset.CUSTOM) {
+                                currReplayId = initialReplayId;
                             }
-                            LOG.error("replay id: " + replayId
-                                      + " is corrupt. Trying to recover by resubscribing with LATEST replay preset");
-                            replayId = null;
-                            initialReplayPreset = ReplayPreset.LATEST;
+                            if (fallbackToLatestReplayId) {
+                                initialReplayPreset = ReplayPreset.LATEST;
+                                LOG.error("replay id: " + currReplayId
+                                          + " is corrupt. Trying to recover by resubscribing with LATEST replay preset");
+                                replayId = null;
+                            } else {
+                                LOG.error("replay id: " + currReplayId + " is corrupted. Retrying...");
+                            }
                         }
                         default -> LOG.error("unexpected errorCode: {}", errorCode);
                     }
