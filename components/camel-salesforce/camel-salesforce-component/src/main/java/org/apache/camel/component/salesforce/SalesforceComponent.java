@@ -281,7 +281,9 @@ public class SalesforceComponent extends DefaultComponent implements SSLContextP
               defaultValue = "30", label = "consumer,advanced")
     private int initialReplyIdTimeout = 30;
 
-    @Metadata(description = "Whether the consumer needs to fallback to the latest replay id when the provided id is not valid",
+    @Metadata(description = "Whether the consumer needs to fallback to the latest replay id when the provided id is not valid. "
+                            + "If set to false, the component will keep retrying; in order to treat this as an exception you can "
+                            + "use BridgeExceptionHandlerToErrorHandler and handle the exception in the route.",
               defaultValue = "false", label = "consumer,advanced")
     private boolean fallbackToLatestReplayId = false;
 
