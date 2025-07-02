@@ -31,12 +31,13 @@ import org.apache.camel.component.salesforce.internal.pubsub.SendInvalidReplayId
 import org.apache.camel.component.salesforce.internal.pubsub.SendOneMessagePubSubServer;
 import org.apache.camel.spi.ExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -161,12 +162,13 @@ public class PubSubApiTest {
                 port, 1000, 10000, true));
         client.setUsePlainTextConnection(true);
         client.start();
-        client.subscribe(consumer, ReplayPreset.CUSTOM, encodeReplayId("123"), true);
+        String replayId = encodeReplayId("123");
+        client.subscribe(consumer, ReplayPreset.CUSTOM, replayId, true);
 
         Thread.sleep(1000);
 
         InOrder inOrder = Mockito.inOrder(client);
-        inOrder.verify(client, timeout(5000)).subscribe(consumer, ReplayPreset.CUSTOM, encodeReplayId("123"), true);
+        inOrder.verify(client, timeout(5000)).subscribe(consumer, ReplayPreset.CUSTOM, replayId, true);
         inOrder.verify(client, timeout(5000)).subscribe(consumer, ReplayPreset.LATEST, null, true);
     }
 
@@ -195,15 +197,20 @@ public class PubSubApiTest {
                 port, 1000, 10000, true));
         client.setUsePlainTextConnection(true);
         client.start();
-        client.subscribe(consumer, ReplayPreset.CUSTOM, encodeReplayId("123"), false);
+        final String replayId = encodeReplayId("123");
+        client.subscribe(consumer, ReplayPreset.CUSTOM, replayId, false);
 
         Thread.sleep(1000);
 
         InOrder inOrder = Mockito.inOrder(client);
-        inOrder.verify(client, timeout(5000).times(3)).subscribe(consumer, ReplayPreset.CUSTOM, encodeReplayId("123"), false);
+        inOrder.verify(client, timeout(5000).times(3)).subscribe(consumer, ReplayPreset.CUSTOM, replayId, false);
         inOrder.verify(client, never()).subscribe(consumer, ReplayPreset.LATEST, null, false);
 
-        verify(exceptionHandler, timeout(5000).times(3)).handleException(any(InvalidReplayIdException.class));
+        ArgumentCaptor<InvalidReplayIdException> captor = ArgumentCaptor.forClass(InvalidReplayIdException.class);
+        verify(exceptionHandler, timeout(5000).times(3)).handleException(captor.capture());
+        for (InvalidReplayIdException exception : captor.getAllValues()) {
+            assertEquals(replayId, exception.getReplayId());
+        }
     }
 
     private String encodeReplayId(String replayId) {
