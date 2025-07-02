@@ -19,7 +19,6 @@ package org.apache.camel.component.salesforce.internal.pubsub;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import com.google.common.primitives.Bytes;
 import com.google.protobuf.ByteString;
 import com.salesforce.eventbus.protobuf.FetchRequest;
 import com.salesforce.eventbus.protobuf.FetchResponse;
@@ -33,18 +32,26 @@ import static org.apache.camel.component.salesforce.internal.client.PubSubApiCli
 
 public class SendInvalidReplayIdErrorPubSubServer extends PubSubGrpc.PubSubImplBase {
 
+    private int count = 0;
+    private int numberOfInvalidIdReplies;
+
+    public SendInvalidReplayIdErrorPubSubServer(int numberOfInvalidIdReplies) {
+        this.numberOfInvalidIdReplies = numberOfInvalidIdReplies;
+    }
+
     @Override
     public StreamObserver<FetchRequest> subscribe(StreamObserver<FetchResponse> client) {
 
         return new StreamObserver<>() {
             @Override
             public void onNext(FetchRequest request) {
-                if (ByteString.copyFromUtf8("123").equals(request.getReplayId())) {
+                count++;
+                if (count <= numberOfInvalidIdReplies && ByteString.copyFromUtf8("123").equals(request.getReplayId())) {
                     TimerTask task = new TimerTask() {
                         public void run() {
                             StatusRuntimeException e = new StatusRuntimeException(Status.UNAUTHENTICATED, new Metadata());
                             e.getTrailers().put(Metadata.Key.of("error-code", Metadata.ASCII_STRING_MARSHALLER),
-                            PUBSUB_ERROR_CORRUPTED_REPLAY_ID);
+                                    PUBSUB_ERROR_CORRUPTED_REPLAY_ID);
                             client.onError(e);
                         }
                     };
@@ -54,7 +61,7 @@ public class SendInvalidReplayIdErrorPubSubServer extends PubSubGrpc.PubSubImplB
                 TimerTask task = new TimerTask() {
                     public void run() {
                         FetchResponse response = FetchResponse.newBuilder()
-                                .setLatestReplayId(ByteString.copyFromUtf8("123"))
+                                .setLatestReplayId(ByteString.copyFromUtf8("456"))
                                 .build();
                         client.onNext(response);
                     }

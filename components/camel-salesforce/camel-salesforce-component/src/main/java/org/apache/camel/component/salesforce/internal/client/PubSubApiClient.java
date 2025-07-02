@@ -60,6 +60,7 @@ import org.apache.avro.reflect.ReflectDatumWriter;
 import org.apache.avro.specific.SpecificDatumReader;
 import org.apache.avro.specific.SpecificDatumWriter;
 import org.apache.avro.specific.SpecificRecord;
+import org.apache.camel.component.salesforce.InvalidReplayIdException;
 import org.apache.camel.component.salesforce.PubSubApiConsumer;
 import org.apache.camel.component.salesforce.SalesforceLoginConfig;
 import org.apache.camel.component.salesforce.api.SalesforceException;
@@ -361,7 +362,9 @@ public class PubSubApiClient extends ServiceSupport {
                                           + " is corrupt. Trying to recover by resubscribing with LATEST replay preset");
                                 replayId = null;
                             } else {
-                                consumer.getExceptionHandler().handleException(new RuntimeException());
+                                consumer.getExceptionHandler().handleException(new InvalidReplayIdException(
+                                        "Invalid replay id: " + currReplayId,
+                                        currReplayId));
                             }
                         }
                         default -> LOG.error("unexpected errorCode: {}", errorCode);
